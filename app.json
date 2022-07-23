@@ -1,0 +1,18 @@
+{
+  "name": "sambungkata",
+  "description": "WhatsApp Bot Using Library Baileys Multi Device",
+  "repository": "https://github.com/syahrularranger/sambungkata",
+  "logo": "https://node-js-sample.herokuapp.com/node.png",
+  "keywords": [
+    "bot",
+    "whatsapp",
+    "whatsapp-bot",
+    "games-wabot",
+    "sambungkata-bot"
+  ],
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ]
+}
