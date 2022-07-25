@@ -1,6 +1,4 @@
 const skata = require('../lib/sambung-kata')
-const delay = ms => new Promise(res => setTimeout(res, ms))
-const { newMessagesDB } = require("@adiwajshing/baileys")
 let handler = m => m
 
 handler.before = async function (m) {
@@ -50,34 +48,37 @@ handler.before = async function (m) {
 		room.waktu = setTimeout(() => {
 			lose_skata = mmr('lose', room.curr)
 			win_skata = (room.killer ? mmr('win', room.killer) : null)
-			this.reply(m.chat, `Waktu jawab habis\n@${room.curr.split`@`[0]} tereliminasi -${lose_skata} MMR${room.killer ? `\n@${room.killer.split`@`[0]} +${win_skata} MMR` : ''}`, room.chat)
-			room.eliminated.push(room.curr)
-			if (room.killer) {
+			this.reply(m.chat, `Waktu jawab habis\n@${room.curr.split`@`[0]} tereliminasi -${lose_skata} MMR${room.killer ? `\n@${room.killer.split`@`[0]} +${win_skata} MMR` : ''}`, room.chat).then(_ => {
+				room.eliminated.push(room.curr)
+				if (room.killer) {
 
-				users[room.killer].skata += win_skata
-				users[room.curr].skata -= lose_skata
-			}
-			let index = member.indexOf(room.curr)
-			member.splice(index, 1)
-			if (index == member.length) room.curr = member[0]
-			else room.curr = member[index]
-			if (member.length == 1 && room.status == 'play') {
-				this.sendButton(m.chat, `@${member[0].split`@`[0]} Berhasil bertahan`, `+${room.win_point}XP`, 2, ['Sambung Kata', '.skata', 'Top Player', '.topskata'], room.chat, { contextInfo: { mentionedJid: member } })
-				users[member[0]].exp += room.win_point
-				delete this.skata[id]
-				return !0
-			} else {
-				room.diam = true
-				room.new = true
-				who = room.curr
-				this.emit('chat-update', {
-					jid: who,
-					hasNewMessage: true,
-					messages: newMessagesDB([conn.cMod(m.chat, m, 'nextkata', who)])
-				})
-			}
+					users[room.killer].skata += win_skata
+					users[room.curr].skata -= lose_skata
+				}
+				let index = member.indexOf(room.curr)
+				member.splice(index, 1)
+				if (index == member.length) room.curr = member[0]
+				else room.curr = member[index]
+				if (member.length == 1 && room.status == 'play') {
+					this.sendButton(m.chat, `@${member[0].split`@`[0]} Berhasil bertahan`, `+${room.win_point}XP`, 2, ['Sambung Kata', '.skata', 'Top Player', '.topskata'], room.chat).then(_ => {
+						users[member[0]].exp += room.win_point
+						delete this.skata[id]
+						return !0
+					})
+
+
+				} else {
+					room.diam = true
+					room.new = true
+					who = room.curr
+					conn.preSudo('nextkata', who, m).then(async _ => {
+						this.ev.emit('messages.upsert', _)
+					})
+				}
+			})
 		}, 30000)
 	}
+
 	if (room.curr == m.sender) {
 		if (/nyerah/i.test(m.text)) {
 			lose_skata = mmr('lose', room.curr)
@@ -94,7 +95,7 @@ handler.before = async function (m) {
 			if (index == (member.length)) room.curr = member[0]
 			else room.curr = member[index]
 			if (member.length == 1 && room.status == 'play') {
-				this.sendButton(m.chat, `@${member[0].split`@`[0]} Berhasil bertahan`, `+${room.win_point}XP\n+${win_skata} MMR`, 2, ['Sambung Kata', '.skata', 'Top Player', '.topskata'], room.chat, { contextInfo: { mentionedJid: member } })
+				await this.sendButton(m.chat, `@${member[0].split`@`[0]} Berhasil bertahan`, `+${room.win_point}XP`, 2, ['Sambung Kata', '.skata', 'Top Player', '.topskata'], room.chat, { contextInfo: { mentionedJid: member } })
 				users[member[0]].skata += win_skata
 				users[member[0]].exp += room.win_point
 				delete this.skata[id]
@@ -103,11 +104,8 @@ handler.before = async function (m) {
 			room.new = true
 			room.diam = true
 			who = room.curr
-			this.emit('chat-update', {
-				jid: who,
-				hasNewMessage: true,
-				messages: newMessagesDB([conn.cMod(m.chat, m, 'nextkata', who)])
-			})
+			let msg = await conn.preSudo('nextkata', who, m)
+			this.ev.emit('messages.upsert', msg)
 		}
 		if (!m.quoted || !m.quoted.fromMe || !m.quoted.isBaileys || !/(Mulai|Tersisa) ?:/i.test(m.quoted.text)) return !0
 		if (m.quoted.id == room.chat.id) {
@@ -134,11 +132,8 @@ handler.before = async function (m) {
 			room.diam = true
 			room.kata = answerF
 			who = room.curr
-			this.emit('chat-update', {
-				jid: who,
-				hasNewMessage: true,
-				messages: newMessagesDB([conn.cMod(m.chat, m, 'nextkata', who)])
-			})
+			let msg = await conn.preSudo('nextkata', who, m)
+			this.ev.emit('messages.upsert', msg)
 			return !0
 		}
 	} else if (room.curr !== m.sender) {
@@ -152,7 +147,6 @@ handler.before = async function (m) {
 	}
 	return !0
 }
-
 module.exports = handler
 
 async function genKata() {

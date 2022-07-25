@@ -167,8 +167,8 @@ module.exports = {
 
             let isROwner = [global.conn.user.jid, ...global.owner].map(v => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net').includes(m.sender)
             let isOwner = isROwner || global.db.data.settings[this.user.jid].owner == m.sender || m.fromMe
-            let isMods = isOwner || global.mods.map(v => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net').includes(m.sender)
-            let isPrems = isROwner || global.prems.map(v => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net').includes(m.sender)
+
+
 
 
             let groupMetadata = (m.isGroup ? (await this.groupMetadata(m.chat).catch(_ => null)) : {}) || {}
@@ -209,7 +209,7 @@ module.exports = {
                     isOwner,
                     isAdmin,
                     isBotAdmin,
-                    isPrems,
+
                     chatUpdate,
                 })) continue
                 if (typeof plugin !== 'function')
@@ -243,7 +243,6 @@ module.exports = {
 
                         if (!['groupInfo.js', 'unbanchat.js', 'bot-on-off.js', 'sapa.js', 'setting.js'].includes(name) && chat && chat.isBanned && !isOwner) return m.reply(`_Bot telah dinonaktifkan untuk chat ${await this.getName(m.chat)}_ ${this.readmore}\n\n${m.isGroup && isAdmin ? `Silahkan aktifkan ketik ${usedPrefix}bot pada group` : m.isGroup ? `Tunggu hingga admin mengaktikan kembali` : `Silahkan aktifkan ketik ${usedPrefix}bot`}`, m.sender)
                         if (m.chat.endsWith('g.us') && chat.gcdate > (new Date * 1)) chat.init = true
-                        if (!['expired.js', 'bot-on-off.js', 'setting.js', 'redeem_use.js', 'sewa.js'].includes(name) && m.chat.endsWith('g.us') && !chat.init && !chat.isBanned) return conn.sendButton(m.chat, `Group ini belum diaktivasi\n*Silahkan dapatkan kode aktivasi* kemudian ketik ${usedPrefix}use _KODEREDEEMNYA_\n\n*Jika kamu belum punya kode, silahkan minta ke Owner atau membeli dengan mengetik ${usedPrefix}premium*`, ``, 2, ['Premium', '.premium', 'Owner', '.owner'], m)
                         if (!['unbanuser.js', '_banned.js', 'profile.js', 'creator.js'].includes(name) && user && user.banned) return m.reply(`*Kamu telah dibanned..*\n_Dikarena kamu telah melakukan pelanggaran Bot_\nHitung mundur:${clockString(user.bannedtime - new Date * 1)}\n\natau Silahkan hubungi owner untuk membuka ban`, m.sender)
                         if (!global.db.data.chats[m.chat].game) {
                             if (plugin.tags && plugin.tags.includes('game')) return m.reply(`Game sedang dimatikan untuk chat ini${this.readmore}\nSilahkan ketik ${usedPrefix}setting`)
@@ -266,10 +265,7 @@ module.exports = {
                         fail('mods', m, this)
                         continue
                     }
-                    if (plugin.premium && !isPrems) { // Premium
-                        fail('premium', m, this)
-                        continue
-                    }
+
                     if (plugin.group && !m.isGroup) { // Group Only
                         fail('group', m, this)
                         continue
@@ -292,7 +288,7 @@ module.exports = {
                     let xp = 'exp' in plugin ? parseInt(plugin.exp) : 17 // XP Earning per command
                     if (xp > 200) m.reply('Ngecit -_-') // Hehehe
                     else m.exp += xp
-                    if (!isPrems && plugin.limit && global.db.data.users[m.sender].limit < plugin.limit * 1) {
+                    if (plugin.limit && global.db.data.users[m.sender].limit < plugin.limit * 1) {
                         this.sendButton(m.chat, `
             _Limit kamu tidak mencukupi untuk memakai fitur ini_`, `Kumpulkan XP dan dapatkan limit agar bisa menggunakan fitur ini`, 'Tukarkan XP => limit', '.buy', 'Info XP', '.infoxp', m)
                         continue // Limit habis
@@ -318,12 +314,12 @@ module.exports = {
                         isOwner,
                         isAdmin,
                         isBotAdmin,
-                        isPrems,
+
                         chatUpdate,
                     }
                     try {
                         await plugin.call(this, m, extra)
-                        if (!isPrems) m.limit = m.limit || plugin.limit || false
+                        m.limit = m.limit || plugin.limit || false
                     } catch (e) {
                         // Error occured
                         m.error = e
